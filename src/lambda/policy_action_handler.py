@@ -25,6 +25,10 @@ class PolicyActionHandler:
                 "mfa_mandatory": True,
                 "session_timeout_minutes": 15,
                 "least_privilege_enforced": True
+            },
+            "AI_MODEL_USAGE": {
+                "require_pii_filtering": True,
+                "approved_providers": ["anthropic", "amazon"]
             }
         }
 
@@ -55,6 +59,16 @@ class PolicyActionHandler:
             mfa_enabled = parameters.get("mfa_enabled", False)
             if not mfa_enabled:
                 violations.append("Multi-Factor Authentication (MFA) must be enabled.")
+                
+        elif policy_key == "AI_MODEL_USAGE":
+            approved_models = ["anthropic.claude-3-sonnet-20240229-v1:0", "amazon.titan-text-express-v1"]
+            model_id = parameters.get("model_id", "")
+            pii_filtering = parameters.get("pii_filtering_enabled", False)
+            
+            if model_id not in approved_models:
+                violations.append(f"Model {model_id} is not on the enterprise approved list.")
+            if not pii_filtering:
+                violations.append("PII filtering guardrails must be enabled for all Generative AI usage.")
 
         is_compliant = len(violations) == 0
         return {
