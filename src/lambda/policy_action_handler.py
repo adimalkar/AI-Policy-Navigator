@@ -29,6 +29,11 @@ class PolicyActionHandler:
             "AI_MODEL_USAGE": {
                 "require_pii_filtering": True,
                 "approved_providers": ["anthropic", "amazon"]
+            },
+            "INFRASTRUCTURE_SECURITY": {
+                "allow_public_s3": False,
+                "min_tls_version": 1.2,
+                "require_vpc_endpoints": True
             }
         }
 
@@ -69,6 +74,18 @@ class PolicyActionHandler:
                 violations.append(f"Model {model_id} is not on the enterprise approved list.")
             if not pii_filtering:
                 violations.append("PII filtering guardrails must be enabled for all Generative AI usage.")
+
+        elif policy_key == "INFRASTRUCTURE_SECURITY":
+            allow_public_s3 = parameters.get("allow_public_s3", True)
+            tls_version = float(parameters.get("tls_version", 1.0))
+            use_vpc_endpoint = parameters.get("use_vpc_endpoint", False)
+
+            if allow_public_s3:
+                violations.append("Public S3 bucket access is strictly prohibited under infrastructure security policy.")
+            if tls_version < rules["min_tls_version"]:
+                violations.append(f"TLS version ({tls_version}) does not meet minimum requirement ({rules['min_tls_version']}).")
+            if rules["require_vpc_endpoints"] and not use_vpc_endpoint:
+                violations.append("VPC endpoints are required for private internal AWS communications.")
 
         is_compliant = len(violations) == 0
         return {
